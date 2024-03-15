@@ -345,6 +345,10 @@ func (m *Message) GetRequestedIP() string {
 	return option.Address.String()
 }
 
+func (m *Message) GetClientIP() string {
+	return m.ClientIPAddr.String()
+}
+
 func (m *Message) SetTextMessage(text string) {
 	m.SetOption(L.NewMessageOption(text))
 }

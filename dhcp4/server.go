@@ -8,18 +8,6 @@ type ResponseWriter interface {
 	WriteResponse(resp *Message) error
 }
 
-type responseWriter struct {
-	server  *Server
-	request *Message
-}
-
-func (w *responseWriter) WriteResponse(resp *Message) error {
-	resp.OpCode = OpCodeBootReply
-	resp.Xid = w.request.Xid
-	addr := net.UDPAddr{IP: net.IPv4bcast, Port: 68}
-	return w.server.Send(&addr, resp)
-}
-
 type Handler interface {
 	ServeDHCP(req *Message, rw ResponseWriter)
 }
@@ -69,4 +57,16 @@ func (s *Server) ListenAndServe(addr string, handler Handler) (err error) {
 		}
 		go handler.ServeDHCP(request, rw)
 	}
+}
+
+type responseWriter struct {
+	server  *Server
+	request *Message
+}
+
+func (w *responseWriter) WriteResponse(resp *Message) error {
+	resp.OpCode = OpCodeBootReply
+	resp.Xid = w.request.Xid
+	addr := net.UDPAddr{IP: net.IPv4bcast, Port: 68}
+	return w.server.Send(&addr, resp)
 }
