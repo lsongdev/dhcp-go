@@ -16,12 +16,12 @@ import (
 //	|  1  |  4  |  m1 |  m2 |  m3 |  m4 |
 //	+-----+-----+-----+-----+-----+-----+
 type SubnetMaskOption struct {
-	SubnetMask net.IPMask
+	SubnetMask net.IP
 }
 
 func NewSubnetMaskOption(mask string) Option {
 	return SubnetMaskOption{
-		SubnetMask: net.IPMask(net.ParseIP(mask)),
+		SubnetMask: net.ParseIP(mask),
 	}
 }
 
@@ -30,7 +30,7 @@ func (o SubnetMaskOption) Code() OptionCode {
 }
 
 func (o SubnetMaskOption) Encode() []byte {
-	return o.SubnetMask
+	return o.SubnetMask.To4()
 }
 
 func (o SubnetMaskOption) Decode(b []byte) Option {

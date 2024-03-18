@@ -302,7 +302,7 @@ func (m *Message) GetOption(code L.OptionCode) L.Option {
 	return m.Options[code]
 }
 
-func (m *Message) HostName() string {
+func (m *Message) GetHostName() string {
 	option, ok := m.GetOption(L.OptionCodeHostName).(L.HostNameOption)
 	if !ok {
 		return ""
@@ -323,6 +323,10 @@ func (m *Message) SetMacAddress(addr string) {
 	var hardwareTypeEthernet uint8 = 1
 	mac, _ := net.ParseMAC(addr)
 	m.SetHardwareInfo(hardwareTypeEthernet, mac)
+}
+
+func (m *Message) GetMacAddress() string {
+	return m.ClientHardwareAddr.String()
 }
 
 func (m *Message) MessageType() L.MessageType {
@@ -351,4 +355,16 @@ func (m *Message) GetClientIP() string {
 
 func (m *Message) SetTextMessage(text string) {
 	m.SetOption(L.NewMessageOption(text))
+}
+
+func (m *Message) GetLeaseTime() uint32 {
+	option, ok := m.GetOption(L.OptionCodeLeaseTime).(L.LeaseTimeOption)
+	if !ok {
+		return 0
+	}
+	return option.LeaseTime
+}
+
+func (m *Message) SetServerIP(ip string) {
+	m.ServerIPAddr = net.ParseIP(ip)
 }

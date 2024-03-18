@@ -1,67 +1,44 @@
 package dhcp4
 
 import (
-	"log"
 	"net"
 
 	"github.com/song940/dhcp-go/dhcp4/options"
 )
 
-type IGetRequestedIP interface {
-	GetRequestedIP() string
-}
-
-type IGetClientIP interface {
-	GetClientIP() string
-}
-
-type DiscoverResponseWriter interface {
-	SendOffer(ip string, options ...options.Option)
-}
-
-type RequestResponseWriter interface {
-	SendAck(ip string, options ...options.Option)
-	SendNak(reason string, options ...options.Option)
-}
-
 type ServerMuxHandler interface {
-	HandleDiscover(discover *Message, rw DiscoverResponseWriter)
-	HandleRequest(request IGetRequestedIP, rw RequestResponseWriter)
-	HandleRenew(renew IGetClientIP, rw RequestResponseWriter)
-	HandleDecline(decline IGetRequestedIP, rw RequestResponseWriter)
-	HandleRelease(release IGetClientIP, rw RequestResponseWriter)
+	HandleDiscover(request *Message, rw OfferWriter)
+	HandleRequest(request IGetRequestedIP, rw AckWriter)
+	HandleRenew(request IGetClientIP, rw AckWriter)
+	HandleRelease(request IGetClientIP, rw ResponseWriter)
+	HandleDecline(request IGetRequestedIP, rw ResponseWriter)
 }
 
 type DefaultServerMux struct {
-	mux ServerMuxHandler
+	h ServerMuxHandler
 }
 
-func NewDefaultServerMux(mux ServerMuxHandler) *DefaultServerMux {
+func NewDefaultServerMux(h ServerMuxHandler) *DefaultServerMux {
 	return &DefaultServerMux{
-		mux: mux,
+		h: h,
 	}
 }
 
 func (d *DefaultServerMux) ServeDHCP(req *Message, rw ResponseWriter) {
-	log.Println("Received:", req.MessageType(), req.String())
-	var res *Message
+	// log.Println("Received:", req.MessageType(), req.String())
 	switch req.MessageType() {
 	case options.DHCPDISCOVER:
-		var rw DiscoverResponseWriter
-		d.mux.HandleDiscover(req, rw)
+		d.h.HandleDiscover(req, rw)
 	case options.DHCPREQUEST:
-		var rw RequestResponseWriter
-		d.mux.HandleRequest(req, rw)
+		if req.ClientIPAddr.Equal(net.IPv4zero) {
+			d.h.HandleRequest(req, rw)
+		} else {
+			d.h.HandleRenew(req, rw)
+		}
 	case options.DHCPDECLINE:
-		var rw RequestResponseWriter
-		d.mux.HandleDecline(req, rw)
+		d.h.HandleDecline(req, rw)
 	case options.DHCPRELEASE:
-		var rw RequestResponseWriter
-		d.mux.HandleRelease(req, rw)
-	}
-	if res != nil {
-		res.ServerIPAddr = net.ParseIP("192.168.2.220")
-		rw.WriteResponse(res)
+		d.h.HandleRelease(req, rw)
 	}
 }
 
