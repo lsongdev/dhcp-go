@@ -79,7 +79,7 @@ func (w *responseWriter) WriteResponse(resp *Message, options ...options.Option)
 	for _, option := range options {
 		resp.SetOption(option)
 	}
-	resp.ServerIPAddr = net.ParseIP("192.168.2.220")
+	resp.ServerIPAddr = net.ParseIP("192.168.2.128")
 	addr := net.UDPAddr{IP: net.IPv4bcast, Port: 68}
 	_, err = w.conn.WriteTo(resp.Bytes(), &addr)
 	return

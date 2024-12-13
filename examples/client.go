@@ -2,16 +2,18 @@ package examples
 
 import (
 	"log"
+	"time"
 
 	"github.com/song940/dhcp-go/dhcp4"
 )
 
 func RunClient() {
 	c, err := dhcp4.NewClient(&dhcp4.ClientConfig{
-		Mac: "aa:bb:cc:dd:ee:ff",
-		// Hostname: "mypc",
+		Mac:      "aa:bb:cc:dd:ee:ff",
+		Hostname: "mypc",
 		// Server:   "192.168.2.1",
-		ClientIP: "192.168.2.185",
+		// ClientIP: "192.168.2.185",
+		Timeout: 30 * time.Second,
 	})
 	if err != nil {
 		log.Fatal(err)
@@ -21,8 +23,8 @@ func RunClient() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// c.SetServer(offer.ServerIPAddr.String())
-	// log.Println(offer)
+	c.SetServer(offer.ServerIPAddr.String())
+	log.Println(offer)
 	ack, err := c.Request(offer)
 	// ack, err := c.Decline(offer, "no reason")
 	// ack, err := c.Renew()

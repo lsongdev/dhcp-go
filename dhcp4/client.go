@@ -2,6 +2,7 @@ package dhcp4
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -25,7 +26,7 @@ type Client struct {
 
 func NewClient(config *ClientConfig) (c *Client, err error) {
 	if config.Timeout == 0 {
-		config.Timeout = 5 * time.Second
+		config.Timeout = 10 * time.Second
 	}
 	c = &Client{
 		config: config,
@@ -55,6 +56,7 @@ func (c *Client) Receive() (msg *Message, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to set read deadline: %s", err)
 	}
+	log.Println("waiting for response")
 	n, _, err := c.conn.ReadFrom(respBuffer)
 	if err != nil {
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -85,13 +87,10 @@ func (c *Client) Discover() (offer *Message, err error) {
 
 func (c *Client) Request(offer *Message) (ack *Message, err error) {
 	request := NewRequestMessage()
-	ip := c.config.ClientIP
-	if ip == "" {
-		err = fmt.Errorf("failed to get client IP")
-		return
-	}
+	ip := offer.YourIPAddr.String()
 	request.SetMacAddress(c.config.Mac)
-	request.SetOption(options.NewRequestedIPAddressOption(ip)) // MUST in selecting
+	request.SetOption(options.NewRequestedIPAddressOption(ip))
+	request.SetOption(options.NewServerIdentifierOption(offer.ServerIPAddr.String()))
 	addr := net.UDPAddr{IP: net.IPv4bcast, Port: 67}
 	if err := c.SendMessage(&addr, request); err != nil {
 		return nil, fmt.Errorf("failed to send request message: %s", err)
@@ -108,6 +107,7 @@ func (c *Client) Decline(offer *Message, reason string) (ack *Message, err error
 	if reason != "" {
 		request.SetOption(options.NewMessageOption(reason))
 	}
+	request.SetOption(options.NewServerIdentifierOption(offer.ServerIPAddr.String()))
 	serverAddr := net.UDPAddr{IP: net.IPv4bcast, Port: 67}
 	if err := c.SendMessage(&serverAddr, request); err != nil {
 		return nil, fmt.Errorf("failed to send reboot message: %s", err)
@@ -121,7 +121,7 @@ func (c *Client) Renew() (ack *Message, err error) {
 	}
 	request := NewRenewMessage(c.config.ClientIP)
 	request.SetMacAddress(c.config.Mac)
-	serverAddr := net.UDPAddr{IP: net.IPv4bcast, Port: 67}
+	serverAddr := net.UDPAddr{IP: net.ParseIP(c.config.Server), Port: 67}
 	if err := c.SendMessage(&serverAddr, request); err != nil {
 		return nil, fmt.Errorf("failed to send renew message: %s", err)
 	}
@@ -134,7 +134,7 @@ func (c *Client) Release() (ack *Message, err error) {
 	}
 	request := NewReleaseMessage(c.config.ClientIP)
 	request.SetMacAddress(c.config.Mac)
-	serverAddr := net.UDPAddr{IP: net.IPv4bcast, Port: 67}
+	serverAddr := net.UDPAddr{IP: net.ParseIP(c.config.Server), Port: 67}
 	if err := c.SendMessage(&serverAddr, request); err != nil {
 		return nil, fmt.Errorf("failed to send release message: %s", err)
 	}
@@ -145,7 +145,7 @@ func (c *Client) Inform() (ack *Message, err error) {
 	request := NewInformMessage()
 	request.SetMacAddress(c.config.Mac)
 	request.ServerIPAddr = net.ParseIP(c.config.Server)
-	// request.ClientIPAddr = net.ParseIP(c.config.ClientIP)
+	request.ClientIPAddr = net.ParseIP(c.config.ClientIP)
 	serverAddr := net.UDPAddr{IP: request.ServerIPAddr, Port: 67}
 	if err := c.SendMessage(&serverAddr, request); err != nil {
 		return nil, fmt.Errorf("failed to send inform message: %s", err)
