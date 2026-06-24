@@ -22,7 +22,7 @@ type BroadcastAddressOption struct {
 	BroadcastAddress net.IP
 }
 
-func NewBroadcastAddress(broadcast string) Option {
+func NewBroadcastAddressOption(broadcast string) Option {
 	return BroadcastAddressOption{
 		BroadcastAddress: net.ParseIP(broadcast),
 	}
