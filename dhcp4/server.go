@@ -177,9 +177,7 @@ type responseWriter struct {
 func (w *responseWriter) WriteResponse(resp *Message, responseOptions ...options.Option) error {
 	resp.OpCode = OpCodeBootReply
 	resp.Xid = w.request.Xid
-	for _, option := range responseOptions {
-		resp.SetOption(option)
-	}
+	applyResponseOptions(resp, responseOptions)
 
 	broadcastFlag := (w.request.Flags & 0x8000) != 0
 	var addr net.UDPAddr
@@ -190,6 +188,15 @@ func (w *responseWriter) WriteResponse(resp *Message, responseOptions ...options
 	}
 	_, err := w.conn.WriteTo(resp.Bytes(), &addr)
 	return err
+}
+
+func applyResponseOptions(resp *Message, responseOptions []options.Option) {
+	for _, option := range responseOptions {
+		resp.SetOption(option)
+		if serverID, ok := option.(options.ServerIdentifierOption); ok {
+			resp.ServerIPAddr = serverID.ServerIdentifier
+		}
+	}
 }
 
 func (w *responseWriter) SendOffer(ip string, responseOptions ...options.Option) {

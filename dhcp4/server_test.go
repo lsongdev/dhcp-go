@@ -5,6 +5,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"github.com/lsongdev/dhcp-go/dhcp4/options"
 )
 
 type testHandler struct {
@@ -72,5 +74,15 @@ func TestIPPoolAssign(t *testing.T) {
 	}
 	if ip.String() != "192.0.2.12" {
 		t.Fatalf("allocated %s, want 192.0.2.12", ip)
+	}
+}
+
+func TestResponseWriterCopiesServerIdentifier(t *testing.T) {
+	req := NewDiscoverMessage()
+	resp := NewOfferMessage(req, "192.0.2.10")
+	serverID := options.NewServerIdentifierOption("192.0.2.1")
+	applyResponseOptions(resp, []options.Option{serverID})
+	if got := resp.ServerIPAddr.String(); got != "192.0.2.1" {
+		t.Fatalf("server IP = %s, want 192.0.2.1", got)
 	}
 }
