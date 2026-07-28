@@ -79,8 +79,7 @@ func (c *Client) ReceiveWithXid(expectedXid uint32) (msg *Message, err error) {
 	for {
 		received, err := c.Receive()
 		if err != nil {
-			log.Println("failed to receive response:", err)
-			continue
+			return nil, err
 		}
 		if received.Xid != expectedXid {
 			log.Println("received mismatched xid:", received.Xid, "expected:", expectedXid)

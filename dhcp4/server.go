@@ -1,10 +1,16 @@
 package dhcp4
 
 import (
+	"errors"
+	"fmt"
 	"net"
+	"sync"
+	"sync/atomic"
 
 	"github.com/lsongdev/dhcp-go/dhcp4/options"
 )
+
+var ErrServerClosed = errors.New("dhcp4: server closed")
 
 type IGetRequestedIP interface {
 	GetRequestedIP() string
@@ -38,78 +44,162 @@ type Handler interface {
 	ServeDHCP(req *Message, rw ResponseWriter)
 }
 
-func ListenAndServe(addr string, handler Handler) (err error) {
-	laddr, err := net.ResolveUDPAddr("udp4", addr)
+// Server is an embeddable DHCPv4 UDP server.
+type Server struct {
+	Addr       string
+	ClientPort int
+	Handler    Handler
+
+	mu       sync.RWMutex
+	conn     *net.UDPConn
+	closed   bool
+	requests atomic.Uint64
+}
+
+func NewServer(addr string, handler Handler) *Server {
+	return &Server{Addr: addr, ClientPort: 68, Handler: handler}
+}
+
+func (s *Server) ListenAndServe() error {
+	laddr, err := net.ResolveUDPAddr("udp4", s.Addr)
 	if err != nil {
-		return err
+		return fmt.Errorf("dhcp4: resolve address %s: %w", s.Addr, err)
 	}
 	conn, err := net.ListenUDP("udp4", laddr)
 	if err != nil {
-		return err
+		return fmt.Errorf("dhcp4: listen udp %s: %w", s.Addr, err)
 	}
-	defer conn.Close()
+	return s.Serve(conn)
+}
+
+func (s *Server) Serve(conn *net.UDPConn) error {
+	if conn == nil {
+		return errors.New("dhcp4: nil UDP connection")
+	}
+	if s.Handler == nil {
+		_ = conn.Close()
+		return errors.New("dhcp4: nil handler")
+	}
+	s.mu.Lock()
+	if s.conn != nil {
+		s.mu.Unlock()
+		_ = conn.Close()
+		return errors.New("dhcp4: server already serving")
+	}
+	s.conn = conn
+	s.closed = false
+	s.mu.Unlock()
+
+	defer func() {
+		s.mu.Lock()
+		if s.conn == conn {
+			s.conn = nil
+		}
+		s.mu.Unlock()
+		_ = conn.Close()
+	}()
+
+	buf := make([]byte, 4096)
 	for {
-		buf := make([]byte, 2048)
-		n, _, err := conn.ReadFrom(buf)
+		n, _, err := conn.ReadFromUDP(buf)
 		if err != nil {
-			return err
+			s.mu.RLock()
+			closed := s.closed
+			s.mu.RUnlock()
+			if closed || errors.Is(err, net.ErrClosed) {
+				return ErrServerClosed
+			}
+			return fmt.Errorf("dhcp4: read request: %w", err)
 		}
 		request, err := FromBytes(buf[:n])
-		if err != nil {
-			return err
-		}
-		if request.OpCode != OpCodeBootRequest {
+		if err != nil || request.OpCode != OpCodeBootRequest {
 			continue
 		}
+		s.requests.Add(1)
 		rw := &responseWriter{
-			conn:    conn,
-			request: request,
+			conn:       conn,
+			request:    request,
+			clientPort: s.clientPort(),
 		}
-		go handler.ServeDHCP(request, rw)
+		go s.Handler.ServeDHCP(request, rw)
 	}
+}
+
+func (s *Server) clientPort() int {
+	if s.ClientPort <= 0 {
+		return 68
+	}
+	return s.ClientPort
+}
+
+func (s *Server) Close() error {
+	s.mu.Lock()
+	s.closed = true
+	conn := s.conn
+	s.mu.Unlock()
+	if conn == nil {
+		return nil
+	}
+	err := conn.Close()
+	if errors.Is(err, net.ErrClosed) {
+		return nil
+	}
+	return err
+}
+
+func (s *Server) LocalAddr() net.Addr {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.conn == nil {
+		return nil
+	}
+	return s.conn.LocalAddr()
+}
+
+func (s *Server) RequestCount() uint64 {
+	return s.requests.Load()
+}
+
+func ListenAndServe(addr string, handler Handler) error {
+	err := NewServer(addr, handler).ListenAndServe()
+	if errors.Is(err, ErrServerClosed) {
+		return nil
+	}
+	return err
 }
 
 type responseWriter struct {
-	conn    *net.UDPConn
-	request *Message
+	conn       *net.UDPConn
+	request    *Message
+	clientPort int
 }
 
-func (w *responseWriter) WriteResponse(resp *Message, options ...options.Option) (err error) {
+func (w *responseWriter) WriteResponse(resp *Message, responseOptions ...options.Option) error {
 	resp.OpCode = OpCodeBootReply
 	resp.Xid = w.request.Xid
-	for _, option := range options {
+	for _, option := range responseOptions {
 		resp.SetOption(option)
 	}
 
-	// Check broadcast flag from client request
-	// If broadcast flag is set (0x8000), broadcast response; otherwise unicast
 	broadcastFlag := (w.request.Flags & 0x8000) != 0
 	var addr net.UDPAddr
 	if broadcastFlag || resp.YourIPAddr.Equal(net.IPv4zero) {
-		// Broadcast to 255.255.255.255:68
-		addr = net.UDPAddr{IP: net.IPv4bcast, Port: 68}
+		addr = net.UDPAddr{IP: net.IPv4bcast, Port: w.clientPort}
 	} else {
-		// Unicast to assigned IP address
-		addr = net.UDPAddr{IP: resp.YourIPAddr, Port: 68}
+		addr = net.UDPAddr{IP: resp.YourIPAddr, Port: w.clientPort}
 	}
-	_, err = w.conn.WriteTo(resp.Bytes(), &addr)
-	return
+	_, err := w.conn.WriteTo(resp.Bytes(), &addr)
+	return err
 }
 
-// SendOffer implements DiscoverResponseWriter.
-func (w *responseWriter) SendOffer(ip string, options ...options.Option) {
-	reply := NewOfferMessage(w.request, ip)
-	w.WriteResponse(reply, options...)
+func (w *responseWriter) SendOffer(ip string, responseOptions ...options.Option) {
+	_ = w.WriteResponse(NewOfferMessage(w.request, ip), responseOptions...)
 }
 
-// SendAck implements ResponseWriter.
-func (w *responseWriter) SendAck(ip string, options ...options.Option) {
-	ack := NewAckMessage(w.request, ip)
-	w.WriteResponse(ack, options...)
+func (w *responseWriter) SendAck(ip string, responseOptions ...options.Option) {
+	_ = w.WriteResponse(NewAckMessage(w.request, ip), responseOptions...)
 }
 
-// SendNak implements ResponseWriter.
-func (w *responseWriter) SendNak(reason string, options ...options.Option) {
-	nak := NewNakMessage(w.request, reason)
-	w.WriteResponse(nak, options...)
+func (w *responseWriter) SendNak(reason string, responseOptions ...options.Option) {
+	_ = w.WriteResponse(NewNakMessage(w.request, reason), responseOptions...)
 }

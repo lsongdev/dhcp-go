@@ -16,6 +16,11 @@ type IPPool struct {
 	macToIP  map[string]uint32
 }
 
+type PoolLease struct {
+	IP  net.IP
+	MAC string
+}
+
 func NewIPPool(network *net.IPNet, start, end net.IP, excluded []net.IP) (*IPPool, error) {
 	startU32 := ipToUint32(start)
 	endU32 := ipToUint32(end)
@@ -72,6 +77,30 @@ func (p *IPPool) Allocate(mac string) (net.IP, error) {
 	return nil, errors.New("no available IP addresses in pool")
 }
 
+// Assign reserves a specific pool address for a client. It is useful when
+// restoring persisted leases or applying static reservations.
+func (p *IPPool) Assign(mac string, ip net.IP) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	ipU32 := ipToUint32(ip)
+	if ip.To4() == nil || ipU32 < p.start || ipU32 > p.end {
+		return errors.New("IP address is outside pool range")
+	}
+	if p.excluded[ipU32] {
+		return errors.New("IP address is excluded from pool")
+	}
+	if owner, ok := p.leased[ipU32]; ok && owner != mac {
+		return errors.New("IP address is already leased")
+	}
+	if current, ok := p.macToIP[mac]; ok && current != ipU32 {
+		delete(p.leased, current)
+	}
+	p.leased[ipU32] = mac
+	p.macToIP[mac] = ipU32
+	return nil
+}
+
 func (p *IPPool) Release(ipStr string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -97,6 +126,17 @@ func (p *IPPool) IsLeased(ipStr string) bool {
 	}
 	_, ok := p.leased[ipToUint32(ip)]
 	return ok
+}
+
+func (p *IPPool) Leases() []PoolLease {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	leases := make([]PoolLease, 0, len(p.leased))
+	for ip, mac := range p.leased {
+		leases = append(leases, PoolLease{IP: uint32ToIP(ip), MAC: mac})
+	}
+	return leases
 }
 
 func ipToUint32(ip net.IP) uint32 {

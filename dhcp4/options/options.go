@@ -74,6 +74,7 @@ var optionTypes = map[OptionCode]Option{
 	OptionCodeSubnetMask:         SubnetMaskOption{},
 	OptionCodeRouter:             RouterOption{},
 	OptionCodeDomainNameServer:   DomainNameServerOption{},
+	OptionCodeNetworkTimeProtocolServers: NetworkTimeProtocolServersOption{},
 	OptionCodeHostName:           HostNameOption{},
 	OptionCodeDomainName:         DomainNameOption{},
 	OptionCodeBroadcastAddress:   BroadcastAddressOption{},
