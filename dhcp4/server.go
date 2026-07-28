@@ -80,6 +80,10 @@ func (s *Server) Serve(conn *net.UDPConn) error {
 		_ = conn.Close()
 		return errors.New("dhcp4: nil handler")
 	}
+	if err := enableBroadcast(conn); err != nil {
+		_ = conn.Close()
+		return fmt.Errorf("dhcp4: enable UDP broadcast: %w", err)
+	}
 	s.mu.Lock()
 	if s.conn != nil {
 		s.mu.Unlock()
