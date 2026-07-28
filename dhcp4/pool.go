@@ -37,11 +37,10 @@ func NewIPPool(network *net.IPNet, start, end net.IP, excluded []net.IP) (*IPPoo
 		excludedMap[ipToUint32(ip)] = true
 	}
 
-	ones, bits := network.Mask.Size()
-	ip := network.IP.To4()
-	excludedMap[ipToUint32(net.IPv4(ip[0], ip[1], ip[2], ip[3]))] = true
-	broadcast := net.IPv4(ip[0], ip[1], ip[2], ip[3])
-	broadcast[3] |= byte(0xff >> (bits - ones))
+	networkIP := network.IP.Mask(network.Mask).To4()
+	excludedMap[ipToUint32(networkIP)] = true
+	maskU32 := ipToUint32(net.IP(network.Mask))
+	broadcast := uint32ToIP(ipToUint32(networkIP) | ^maskU32)
 	excludedMap[ipToUint32(broadcast)] = true
 
 	return &IPPool{

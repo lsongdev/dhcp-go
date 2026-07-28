@@ -77,6 +77,20 @@ func TestIPPoolAssign(t *testing.T) {
 	}
 }
 
+func TestIPPoolExcludesBroadcastForWideSubnet(t *testing.T) {
+	_, network, err := net.ParseCIDR("10.20.0.0/16")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := NewIPPool(network, net.ParseIP("10.20.255.255"), net.ParseIP("10.20.255.255"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pool.Allocate("00:11:22:33:44:55"); err == nil {
+		t.Fatal("broadcast address was allocated")
+	}
+}
+
 func TestResponseWriterCopiesServerIdentifier(t *testing.T) {
 	req := NewDiscoverMessage()
 	resp := NewOfferMessage(req, "192.0.2.10")
