@@ -1,0 +1,21 @@
+# dhcp-go configuration. Copy to dhcp.yaml and run: dhcp-go -config dhcp.yaml
+# The web UI writes changes to the server section back to this file.
+
+# Web UI and API. Keep it on loopback, or set a password.
+listen: 127.0.0.1:8067
+# HTTP basic authentication (any user name); DHCP_GO_PASSWORD overrides it.
+password: ""
+# Reservations and leases (SQLite), relative to this file.
+database: dhcp.db
+
+server:
+  # Only one DHCP server should answer on a network: turn off the router's
+  # DHCP server (or any other) on this network before enabling this one.
+  enabled: false
+  interface: eth0
+  range_start: 192.168.1.100
+  range_end: 192.168.1.200
+  router: 192.168.1.1
+  dns: [192.168.1.1]
+  domain: lan
+  lease_time: 43200 # seconds

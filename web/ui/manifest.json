@@ -1,0 +1,15 @@
+{
+  "contract": 1,
+  "id": "dhcp",
+  "title": "DHCP",
+  "icon": "⇄",
+  "entry": "module.js",
+  "styles": ["stylesheets.css", "style.css", "dhcp.css"],
+  "home": "/",
+  "nav": [
+    { "path": "/", "title": "Leases", "icon": "⇄" },
+    { "path": "/reservations", "title": "Reservations", "icon": "⚑" },
+    { "path": "/activity", "title": "Activity", "icon": "☰" },
+    { "path": "/settings", "title": "Settings", "icon": "⚙" }
+  ]
+}

@@ -1,0 +1,10 @@
+# build output
+/dist/
+/dhcp-go
+/cmd/dhcp-go/dhcp-go
+
+# local configuration and state
+/dhcp.yaml
+*.db
+*.db-*
+.DS_Store
