@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math/rand"
 	"net"
+	"sort"
 
 	L "github.com/lsongdev/dhcp-go/dhcp4/options"
 )
@@ -164,8 +166,25 @@ func NewInformMessage() *Message {
 	return msg
 }
 
-// FromBytes decodes the DHCP message from bytes.
+// headerLength is the fixed BOOTP header plus the magic cookie.
+const headerLength = 240
+
+var (
+	ErrShortMessage   = errors.New("dhcp4: message shorter than the BOOTP header")
+	ErrNotDHCPMessage = errors.New("dhcp4: missing DHCP magic cookie")
+)
+
+// FromBytes decodes the DHCP message from bytes. Data comes from the
+// network, so it is checked rather than trusted: a short message or one
+// without the magic cookie is an error, the hardware address is limited
+// to its 16-byte field, and an option running past the end is dropped.
 func FromBytes(data []byte) (m *Message, err error) {
+	if len(data) < headerLength {
+		return nil, ErrShortMessage
+	}
+	if !bytes.Equal(data[236:240], MagicCookie) {
+		return nil, ErrNotDHCPMessage
+	}
 	m = NewMessage()
 	reader := bytes.NewReader(data)
 	// Read fixed-length fields
@@ -184,6 +203,9 @@ func FromBytes(data []byte) (m *Message, err error) {
 	m.GatewayIPAddr = readIP(reader)
 
 	// Read ClientHardwareAddr
+	if m.HardwareLength > 16 {
+		m.HardwareLength = 16
+	}
 	m.ClientHardwareAddr = readBytes(reader, 16)
 	m.ClientHardwareAddr = m.ClientHardwareAddr[:m.HardwareLength]
 	//
@@ -192,18 +214,21 @@ func FromBytes(data []byte) (m *Message, err error) {
 	m.MagicCookie = readBytes(reader, 4)
 	for {
 		code, err := reader.ReadByte()
-		if err != nil {
+		if err != nil || code == 0xFF {
 			break
 		}
-		if code == 0xFF {
+		if code == 0 { // Pad: a single byte, no length
+			continue
+		}
+		length, err := reader.ReadByte()
+		if err != nil || int(length) > reader.Len() {
 			break
 		}
-		length, _ := reader.ReadByte()
 		data := readBytes(reader, int(length))
 		c := L.OptionCode(code)
 		m.Options[c] = L.ParseOption(c, data)
 	}
-	return
+	return m, nil
 }
 
 func readBytes(reader *bytes.Reader, length int) []byte {
@@ -251,9 +276,24 @@ func (m *Message) Bytes() []byte {
 
 	// MagicCookie
 	buf.Write(m.MagicCookie)
-	// write options
-	for code, option := range m.Options {
-		data := option.Encode()
+	// Options in code order, the message type first (RFC 2131 does not
+	// require it, but some clients expect it). An option longer than 255
+	// bytes cannot be encoded and is left out.
+	codes := make([]L.OptionCode, 0, len(m.Options))
+	for code := range m.Options {
+		codes = append(codes, code)
+	}
+	sort.Slice(codes, func(i, j int) bool {
+		if (codes[i] == L.OptionCodeMessageType) != (codes[j] == L.OptionCodeMessageType) {
+			return codes[i] == L.OptionCodeMessageType
+		}
+		return codes[i] < codes[j]
+	})
+	for _, code := range codes {
+		data := m.Options[code].Encode()
+		if len(data) > 255 {
+			continue
+		}
 		buf.WriteByte(byte(code))
 		buf.WriteByte(byte(len(data)))
 		buf.Write(data)

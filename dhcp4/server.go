@@ -3,7 +3,9 @@ package dhcp4
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -125,8 +127,19 @@ func (s *Server) Serve(conn *net.UDPConn) error {
 			request:    request,
 			clientPort: s.clientPort(),
 		}
-		go s.Handler.ServeDHCP(request, rw)
+		go s.serve(request, rw)
 	}
+}
+
+// serve runs the handler for one request. A panicking handler loses that
+// request, not the server (or the program embedding it).
+func (s *Server) serve(request *Message, rw *responseWriter) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("dhcp4: handler panic: %v\n%s", err, debug.Stack())
+		}
+	}()
+	s.Handler.ServeDHCP(request, rw)
 }
 
 func (s *Server) clientPort() int {
@@ -183,16 +196,40 @@ func (w *responseWriter) WriteResponse(resp *Message, responseOptions ...options
 	resp.Xid = w.request.Xid
 	applyResponseOptions(resp, responseOptions)
 
-	broadcastFlag := (w.request.Flags & 0x8000) != 0
-	var addr net.UDPAddr
-	if broadcastFlag || resp.YourIPAddr.Equal(net.IPv4zero) {
-		addr = net.UDPAddr{IP: net.IPv4bcast, Port: w.clientPort}
-	} else {
-		addr = net.UDPAddr{IP: resp.YourIPAddr, Port: w.clientPort}
-	}
+	resp.Flags = w.request.Flags
+	addr := w.destination(resp)
 	_, err := w.conn.WriteTo(resp.Bytes(), &addr)
 	return err
 }
+
+// flagBroadcast is the BOOTP broadcast flag a client sets when it cannot
+// receive unicast before it is configured.
+const flagBroadcast = 0x8000
+
+// destination picks where a reply goes (RFC 2131, section 4.1): to the
+// relay agent that forwarded the request; to a configured client at its
+// address; otherwise broadcast. A client without an address cannot be
+// reached by unicast without writing its ARP entry, which a UDP socket
+// cannot do, so those replies are broadcast even without the flag, as
+// most servers do. A DHCPNAK to a client is always broadcast.
+func (w *responseWriter) destination(resp *Message) net.UDPAddr {
+	nak := resp.MessageType() == options.DHCPNAK
+	switch {
+	case isSet(w.request.GatewayIPAddr):
+		if nak {
+			resp.Flags |= flagBroadcast
+		}
+		return net.UDPAddr{IP: w.request.GatewayIPAddr, Port: 67}
+	case nak:
+		return net.UDPAddr{IP: net.IPv4bcast, Port: w.clientPort}
+	case isSet(w.request.ClientIPAddr):
+		return net.UDPAddr{IP: w.request.ClientIPAddr, Port: w.clientPort}
+	default:
+		return net.UDPAddr{IP: net.IPv4bcast, Port: w.clientPort}
+	}
+}
+
+func isSet(ip net.IP) bool { return ip != nil && !ip.Equal(net.IPv4zero) }
 
 func applyResponseOptions(resp *Message, responseOptions []options.Option) {
 	for _, option := range responseOptions {

@@ -71,25 +71,25 @@ const (
 )
 
 var optionTypes = map[OptionCode]Option{
-	OptionCodeSubnetMask:         SubnetMaskOption{},
-	OptionCodeRouter:             RouterOption{},
-	OptionCodeDomainNameServer:   DomainNameServerOption{},
+	OptionCodeSubnetMask:                 SubnetMaskOption{},
+	OptionCodeRouter:                     RouterOption{},
+	OptionCodeDomainNameServer:           DomainNameServerOption{},
 	OptionCodeNetworkTimeProtocolServers: NetworkTimeProtocolServersOption{},
-	OptionCodeHostName:           HostNameOption{},
-	OptionCodeDomainName:         DomainNameOption{},
-	OptionCodeBroadcastAddress:   BroadcastAddressOption{},
-	OptionCodeRequestedIPAddress: RequestedIPAddressOption{},
-	OptionCodeLeaseTime:          LeaseTimeOption{},
-	OptionCodeMessageType:        MessageTypeOption{},
-	OptionCodeServerIdentifier:   ServerIdentifierOption{},
-	OptionCodeParameterRequest:   ParameterRequestOption{},
-	OptionCodeMessage:            MessageOption{},
-	OptionCodeMaximumMessageSize: MaximumMessageSizeOption{},
-	OptionCodeRenewalTime:        RenewalTimeOption{},
-	OptionCodeRebindingTime:      RebindingTimeOption{},
-	OptionCodeClientIdentifier:   ClientIdentifierOption{},
-	108:                          Option108{},
-	138:                          Option138{},
+	OptionCodeHostName:                   HostNameOption{},
+	OptionCodeDomainName:                 DomainNameOption{},
+	OptionCodeBroadcastAddress:           BroadcastAddressOption{},
+	OptionCodeRequestedIPAddress:         RequestedIPAddressOption{},
+	OptionCodeLeaseTime:                  LeaseTimeOption{},
+	OptionCodeMessageType:                MessageTypeOption{},
+	OptionCodeServerIdentifier:           ServerIdentifierOption{},
+	OptionCodeParameterRequest:           ParameterRequestOption{},
+	OptionCodeMessage:                    MessageOption{},
+	OptionCodeMaximumMessageSize:         MaximumMessageSizeOption{},
+	OptionCodeRenewalTime:                RenewalTimeOption{},
+	OptionCodeRebindingTime:              RebindingTimeOption{},
+	OptionCodeClientIdentifier:           ClientIdentifierOption{},
+	108:                                  Option108{},
+	138:                                  Option138{},
 	// option95: LDAP
 	// option108: IPv6-Only Preferred
 	// option114: DHCP Captive-Portal(URL)
@@ -99,10 +99,18 @@ var optionTypes = map[OptionCode]Option{
 	// option252: Private/Proxy autodiscovery
 }
 
-func ParseOption(code OptionCode, data []byte) Option {
-	option, ok := optionTypes[code]
+// ParseOption decodes an option. Data a typed decoder cannot read (too
+// short, or a length that is not a multiple of an address) is kept as a
+// RawOption instead, so a malformed option from the network never panics.
+func ParseOption(code OptionCode, data []byte) (option Option) {
+	typed, ok := optionTypes[code]
 	if !ok {
-		option = NewRawOption(code)
+		return NewRawOption(code).Decode(data)
 	}
-	return option.Decode(data)
+	defer func() {
+		if recover() != nil {
+			option = NewRawOption(code).Decode(data)
+		}
+	}()
+	return typed.Decode(data)
 }
