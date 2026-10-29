@@ -1,5 +1,5 @@
 // Package web assembles the DHCP server as a panel module: configuration,
-// reservations and leases in SQLite, the server itself, the JSON API, and
+// reservations and leases in a supplied store, the server itself, the JSON API, and
 // the browser UI (native ES modules in ui/, no build step).
 //
 // A DHCP value satisfies the panel module contract without depending on
@@ -10,7 +10,6 @@ package web
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"io/fs"
 	"net/http"
@@ -37,27 +36,16 @@ type Options = api.Options
 // DHCP is the assembled module.
 type DHCP struct {
 	Service *api.Service
-	store   *store.SQLite
 }
 
-// New migrates the dhcp_ tables in db (shareable with other modules) and
-// starts the server if its saved configuration enables it; a new
-// installation leaves it disabled. The caller owns db.
-func New(ctx context.Context, db *sql.DB, opts Options) (*DHCP, error) {
-	st, err := store.New(ctx, db)
-	if err != nil {
-		return nil, err
-	}
-	return NewWithStore(ctx, st, opts)
-}
-
-// NewWithStore assembles the module on st, which it closes on Close.
-func NewWithStore(ctx context.Context, st *store.SQLite, opts Options) (*DHCP, error) {
+// New assembles the module on st and starts the server if enabled.
+// The caller owns the store's lifetime.
+func New(ctx context.Context, st store.Store, opts Options) (*DHCP, error) {
 	service, err := api.NewService(ctx, st, opts)
 	if err != nil {
 		return nil, err
 	}
-	return &DHCP{Service: service, store: st}, nil
+	return &DHCP{Service: service}, nil
 }
 
 // Handler serves the module's API with relative routes.
@@ -66,9 +54,5 @@ func (d *DHCP) Handler() http.Handler { return d.Service.Handler() }
 // Assets returns the browser UI; manifest.json is at its root.
 func (d *DHCP) Assets() fs.FS { return UI }
 
-// Close stops the server and releases the store; a database passed to New
-// stays open.
-func (d *DHCP) Close() error {
-	d.Service.Close()
-	return d.store.Close()
-}
+// Close stops the server.
+func (d *DHCP) Close() error { return d.Service.Close() }

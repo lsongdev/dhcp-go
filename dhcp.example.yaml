@@ -1,12 +1,13 @@
 # dhcp-go configuration. Copy to dhcp.yaml and run: dhcp-go -config dhcp.yaml
-# The web UI writes changes to the server section back to this file.
+# The web UI saves server settings back to this file.
 
 # Web UI and API. Keep it on loopback, or set a password.
 listen: 127.0.0.1:8067
 # HTTP basic authentication (any user name); DHCP_GO_PASSWORD overrides it.
 password: ""
-# Reservations and leases (SQLite), relative to this file.
-database: dhcp.db
+
+# Runtime data: reservations and leases (relative to this configuration).
+state_file: dhcp.state.yaml
 
 server:
   # Only one DHCP server should answer on a network: turn off the router's

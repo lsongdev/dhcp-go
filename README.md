@@ -81,7 +81,7 @@ On DHCPDISCOVER a client is offered, in order: its reservation (and only
 that, inside or outside the range); the address offered or leased to it
 before; the address it asks for; an address never handed out; then the one
 whose lease expired longest ago. Offers are held for a minute. Leases are
-saved in SQLite, so clients keep their addresses across restarts; expired
+saved in YAML, so clients keep their addresses across restarts; expired
 leases are kept for 30 days so returning devices get their old address.
 Clients are identified by MAC address.
 
@@ -98,10 +98,11 @@ sudo ./dhcp-go -config dhcp.yaml
 ```
 
 The file sets where the web UI listens (`listen`, with an optional
-`password` or `DHCP_GO_PASSWORD`), the SQLite file for reservations and
-leases (`database`), and the server's settings (`server`). Changes made in
-the UI are written back to the `server` section; the rest of the file,
-comments included, is kept.
+`password` or `DHCP_GO_PASSWORD`), the server's settings (`server`),
+and a separate runtime state file (`state_file`, default `dhcp.state.yaml`,
+relative to the configuration). Reservations and leases are saved in that
+state file; DHCP activity never rewrites the configuration. Both files are
+updated atomically, preserving unrelated sections and comments.
 
 Serving DHCP binds UDP port 67, which needs root (or
 `CAP_NET_BIND_SERVICE`, plus `CAP_NET_RAW` for the interface binding on
@@ -114,10 +115,14 @@ The server and its UI follow the panel module contract (see OhMyServer's
 `docs/module-contract.md`); OhMyServer mounts it as DHCP:
 
 ```go
-d, err := web.New(ctx, db, web.Options{}) // tables are prefixed dhcp_; settings too
+st := &config.File{Path: "dhcp.yaml"}
+d, err := web.New(ctx, st, web.Options{})
 d.Handler()                               // JSON API, relative routes
 d.Assets()                                // UI with manifest.json
 ```
+
+Storage is provided through `store.Store`. OhMyServer keeps its SQLite
+adapter in its own `modules/dhcp` package; dhcp-go has no database dependency.
 
 ### API
 

@@ -20,7 +20,6 @@ import (
 
 	"github.com/lsongdev/dhcp-go/config"
 	"github.com/lsongdev/dhcp-go/examples"
-	"github.com/lsongdev/dhcp-go/store"
 	"github.com/lsongdev/dhcp-go/web"
 )
 
@@ -57,13 +56,8 @@ func run(path string, logger *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	st, err := store.Open(ctx, cfg.Database)
+	module, err := web.New(ctx, &config.File{Path: path}, web.Options{Logger: logger})
 	if err != nil {
-		return err
-	}
-	module, err := web.NewWithStore(ctx, st, web.Options{Logger: logger, Config: &config.File{Path: path}})
-	if err != nil {
-		st.Close()
 		return err
 	}
 	defer module.Close()
@@ -83,7 +77,7 @@ func run(path string, logger *slog.Logger) error {
 	srv := &http.Server{Addr: cfg.Listen, Handler: module.Standalone(password), ReadHeaderTimeout: 10 * time.Second}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
-	logger.Info("dhcp-go listening", "url", "http://"+cfg.Listen, "config", path, "db", cfg.Database)
+	logger.Info("dhcp-go listening", "url", "http://"+cfg.Listen, "config", path)
 	select {
 	case err := <-errc:
 		return err

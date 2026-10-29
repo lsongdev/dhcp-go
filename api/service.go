@@ -17,20 +17,9 @@ import (
 	"github.com/lsongdev/dhcp-go/store"
 )
 
-// ConfigStore keeps the server configuration. store.SQLite is one; the
-// standalone command keeps it in its YAML file instead (config.File).
-type ConfigStore interface {
-	// Config returns the saved configuration; ok is false before the
-	// first save.
-	Config(ctx context.Context) (cfg server.Config, ok bool, err error)
-	SaveConfig(ctx context.Context, cfg server.Config) error
-}
-
 // Options configures the service.
 type Options struct {
 	Logger *slog.Logger
-	// Config keeps the configuration; nil keeps it in the SQLite store.
-	Config ConfigStore
 	// Port is the server's UDP port; 0 means 67. Clients always send to 67:
 	// another port is only useful for tests.
 	Port int
@@ -51,7 +40,7 @@ const keepExpired = 30 * 24 * time.Hour
 // Service runs the server and manages its configuration, reservations and
 // leases.
 type Service struct {
-	store *store.SQLite
+	store store.Store
 	opts  Options
 	log   *slog.Logger
 
@@ -67,7 +56,7 @@ type Service struct {
 // NewService loads the configuration and starts the server if it is
 // enabled. A server that cannot start is reported in Status and retried,
 // not returned as an error: the panel stays up either way.
-func NewService(ctx context.Context, st *store.SQLite, opts Options) (*Service, error) {
+func NewService(ctx context.Context, st store.Store, opts Options) (*Service, error) {
 	if opts.Logger == nil {
 		opts.Logger = slog.Default()
 	}
@@ -80,10 +69,7 @@ func NewService(ctx context.Context, st *store.SQLite, opts Options) (*Service, 
 	if opts.Listen == nil {
 		opts.Listen = dhcp4.ListenInterface
 	}
-	if opts.Config == nil {
-		opts.Config = st
-	}
-	cfg, _, err := opts.Config.Config(ctx)
+	cfg, _, err := st.Config(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +241,7 @@ func (s *Service) SetConfig(ctx context.Context, cfg server.Config) (Status, err
 	if err := cfg.Normalize(s.opts.Lookup); err != nil {
 		return Status{}, err
 	}
-	if err := s.opts.Config.SaveConfig(ctx, cfg); err != nil {
+	if err := s.store.SaveConfig(ctx, cfg); err != nil {
 		return Status{}, err
 	}
 	s.mu.Lock()

@@ -11,20 +11,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/lsongdev/dhcp-go/config"
 	"github.com/lsongdev/dhcp-go/dhcp4"
 	"github.com/lsongdev/dhcp-go/server"
-	"github.com/lsongdev/dhcp-go/store"
+	"os"
 )
 
 // testService runs the service against a fake eth0 on 192.0.2.0/24 whose
 // "port 67" is a loopback socket, so tests never touch a real network.
-func testService(t *testing.T) (*Service, *store.SQLite) {
+func testService(t *testing.T) (*Service, *config.File) {
 	t.Helper()
-	st, err := store.Open(context.Background(), filepath.Join(t.TempDir(), "dhcp.db"))
-	if err != nil {
+	path := filepath.Join(t.TempDir(), "dhcp.yaml")
+	if err := os.WriteFile(path, []byte("server: {}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { st.Close() })
+	st := &config.File{Path: path}
 	_, subnet, _ := net.ParseCIDR("192.0.2.0/24")
 	s, err := NewService(context.Background(), st, Options{
 		Lookup: func(name string) (server.Network, error) {

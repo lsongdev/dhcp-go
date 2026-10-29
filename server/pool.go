@@ -20,23 +20,23 @@ var (
 
 // Lease binds an address to a client.
 type Lease struct {
-	IP        string    `json:"ip"`
-	MAC       string    `json:"mac"`
-	Hostname  string    `json:"hostname"`
-	ExpiresAt time.Time `json:"expires_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	IP        string    `json:"ip" yaml:"ip"`
+	MAC       string    `json:"mac" yaml:"mac"`
+	Hostname  string    `json:"hostname" yaml:"hostname"`
+	ExpiresAt time.Time `json:"expires_at" yaml:"expires_at"`
+	UpdatedAt time.Time `json:"updated_at" yaml:"updated_at"`
 }
 
 // Reservation always gives a client (by MAC address) the same address,
 // inside or outside the range.
 type Reservation struct {
-	ID          int64     `json:"id"`
-	MAC         string    `json:"mac"`
-	IP          string    `json:"ip"`
-	Hostname    string    `json:"hostname"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int64     `json:"id" yaml:"id"`
+	MAC         string    `json:"mac" yaml:"mac"`
+	IP          string    `json:"ip" yaml:"ip"`
+	Hostname    string    `json:"hostname" yaml:"hostname"`
+	Description string    `json:"description" yaml:"description"`
+	CreatedAt   time.Time `json:"created_at" yaml:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at" yaml:"updated_at"`
 }
 
 // Normalize checks a reservation's addresses and canonicalises them.
