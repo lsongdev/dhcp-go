@@ -29,7 +29,7 @@ export default function Reservations() {
             <div class="cell-sub mono">${r.mac}</div>
           </td>
           <td class="muted">${r.description || '—'}</td>
-          <td class="actions"><span class="button-row">
+          <td class="actions"><span class="row-actions">
             <button class="button button-small" onClick=${() => setEditing(r)}>Edit</button>
             <button class="button button-small button-danger" disabled=${busy[r.id]} onClick=${() => remove(r)}>Delete</button>
           </span></td>

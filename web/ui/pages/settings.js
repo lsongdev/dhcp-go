@@ -101,7 +101,7 @@ function SettingsForm({ saved, interfaces, onSaved }) {
     <${Field} label="DNS servers" hint="In order of preference; leave empty to send none">
       <${ListInput} values=${c.dns} onChange=${dns => set({ dns })} placeholder="192.168.1.1" inputClassName="input mono" />
     <//>
-    <div class="form-actions">
+    <div class="button-actions">
       <button class="button button-primary" type="submit" disabled=${save.busy}>${save.busy ? 'Saving…' : 'Save'}</button>
     </div>
   </form>`;

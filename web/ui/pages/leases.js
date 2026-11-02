@@ -52,7 +52,7 @@ export default function Leases() {
             <div class="cell-sub mono">${l.mac}</div>
           </td>
           <td class="nowrap" title=${datetime(l.expires_at)}>${l.active ? ago(l.expires_at) : html`<span class="muted">Expired ${ago(l.expires_at)}</span>`}</td>
-          <td class="actions"><span class="button-row">
+          <td class="actions"><span class="row-actions">
             ${l.reserved ? null : html`<button class="button button-small" onClick=${() => setReserving(l)}>Reserve</button>`}
             <button class="button button-small button-danger" disabled=${busy[l.ip]} onClick=${() => remove(l)}>Forget</button>
           </span></td>
