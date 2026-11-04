@@ -70,34 +70,32 @@ function SettingsForm({ saved, interfaces, onSaved }) {
   return html`<form class="form form-narrow" onSubmit=${submit}>
     <${Notice} error=${save.error} />
     <${Check} label="Serve DHCP on this network" checked=${c.enabled} onChange=${e => set({ enabled: e.currentTarget.checked })} />
-    <div class="form-grid">
-      <${Field} label="Interface" required=${c.enabled}
-        hint=${iface ? `Answers on ${iface.addresses.join(', ')}` : 'The network the server answers on; its address is the server address'}>
-        <select class="input" value=${c.interface} onChange=${e => set({ interface: e.currentTarget.value })}>
-          <option value="">Choose an interface</option>
-          ${interfaces.map(i => html`<option key=${i.name} value=${i.name}>${i.name} (${i.addresses.join(', ')})${i.up ? '' : ' · down'}</option>`)}
-          ${c.interface && !iface ? html`<option value=${c.interface}>${c.interface} (not found)</option>` : null}
-        </select>
-      <//>
-      <${Field} label="Lease time">
-        <select class="input" value=${c.lease_time} onChange=${e => set({ lease_time: Number(e.currentTarget.value) })}>
-          ${LEASE_TIMES.map(([v, label]) => html`<option key=${v} value=${v}>${label}</option>`)}
-          ${leaseKnown ? null : html`<option value=${c.lease_time}>${c.lease_time} seconds</option>`}
-        </select>
-      <//>
-      <${Field} label="First address" required=${c.enabled}>
-        <input class="input mono" value=${c.range_start} placeholder="192.168.1.100" onInput=${e => set({ range_start: e.currentTarget.value })} />
-      <//>
-      <${Field} label="Last address" required=${c.enabled}>
-        <input class="input mono" value=${c.range_end} placeholder="192.168.1.200" onInput=${e => set({ range_end: e.currentTarget.value })} />
-      <//>
-      <${Field} label="Router" hint="The default gateway clients use; leave empty to send none">
-        <input class="input mono" value=${c.router} placeholder="192.168.1.1" onInput=${e => set({ router: e.currentTarget.value })} />
-      <//>
-      <${Field} label="Domain" hint="Search domain for short host names, e.g. lan">
-        <input class="input" value=${c.domain} placeholder="lan" onInput=${e => set({ domain: e.currentTarget.value })} />
-      <//>
-    </div>
+    <${Field} label="Interface" required=${c.enabled}
+      hint=${iface ? `Answers on ${iface.addresses.join(', ')}` : 'The network the server answers on; its address is the server address'}>
+      <select class="input" value=${c.interface} onChange=${e => set({ interface: e.currentTarget.value })}>
+        <option value="">Choose an interface</option>
+        ${interfaces.map(i => html`<option key=${i.name} value=${i.name}>${i.name} (${i.addresses.join(', ')})${i.up ? '' : ' · down'}</option>`)}
+        ${c.interface && !iface ? html`<option value=${c.interface}>${c.interface} (not found)</option>` : null}
+      </select>
+    <//>
+    <${Field} label="Lease time">
+      <select class="input" value=${c.lease_time} onChange=${e => set({ lease_time: Number(e.currentTarget.value) })}>
+        ${LEASE_TIMES.map(([v, label]) => html`<option key=${v} value=${v}>${label}</option>`)}
+        ${leaseKnown ? null : html`<option value=${c.lease_time}>${c.lease_time} seconds</option>`}
+      </select>
+    <//>
+    <${Field} label="First address" required=${c.enabled}>
+      <input class="input mono" value=${c.range_start} placeholder="192.168.1.100" onInput=${e => set({ range_start: e.currentTarget.value })} />
+    <//>
+    <${Field} label="Last address" required=${c.enabled}>
+      <input class="input mono" value=${c.range_end} placeholder="192.168.1.200" onInput=${e => set({ range_end: e.currentTarget.value })} />
+    <//>
+    <${Field} label="Router" hint="The default gateway clients use; leave empty to send none">
+      <input class="input mono" value=${c.router} placeholder="192.168.1.1" onInput=${e => set({ router: e.currentTarget.value })} />
+    <//>
+    <${Field} label="Domain" hint="Search domain for short host names, e.g. lan">
+      <input class="input" value=${c.domain} placeholder="lan" onInput=${e => set({ domain: e.currentTarget.value })} />
+    <//>
     <${Field} label="DNS servers" hint="In order of preference; leave empty to send none">
       <${ListInput} values=${c.dns} onChange=${dns => set({ dns })} placeholder="192.168.1.1" inputClassName="input mono" />
     <//>
