@@ -4,12 +4,30 @@
   "title": "DHCP",
   "icon": "⇄",
   "entry": "module.js",
-  "styles": ["stylesheets.css", "style.css", "dhcp.css"],
+  "styles": [
+    "dhcp.css"
+  ],
   "home": "/",
   "nav": [
-    { "path": "/", "title": "Leases", "icon": "⇄" },
-    { "path": "/reservations", "title": "Reservations", "icon": "⚑" },
-    { "path": "/activity", "title": "Activity", "icon": "☰" },
-    { "path": "/settings", "title": "Settings", "icon": "⚙" }
+    {
+      "path": "/",
+      "title": "Leases",
+      "icon": "⇄"
+    },
+    {
+      "path": "/reservations",
+      "title": "Reservations",
+      "icon": "⚑"
+    },
+    {
+      "path": "/activity",
+      "title": "Activity",
+      "icon": "☰"
+    },
+    {
+      "path": "/settings",
+      "title": "Settings",
+      "icon": "⚙"
+    }
   ]
 }
