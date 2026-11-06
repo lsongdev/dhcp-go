@@ -2,7 +2,8 @@
 import { html, useState } from '@lsongdev/panel/html.js';
 import { useAction, useResource } from '@lsongdev/panel/hooks.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
-import { Notice, Status, Field, Modal } from '@lsongdev/panel/ui.js';
+import { Alert, Field } from '@lsongdev/scripts/react/components/index.js';
+import { Status, Modal } from '@lsongdev/panel/ui.js';
 
 // useApi loads a GET endpoint, polling every interval milliseconds when
 // given. A null path loads nothing yet.
@@ -24,9 +25,9 @@ export function ServerNotice({ status }) {
   const { href } = usePanel();
   if (!status || status.running) return null;
   if (!status.enabled) {
-    return html`<${Notice} tone="info">The DHCP server is off. Set it up and turn it on in <a href=${href('/settings')}>Settings</a>.<//>`;
+    return html`<${Alert} variant="info">The DHCP server is off. Set it up and turn it on in <a href=${href('/settings')}>Settings</a>.<//>`;
   }
-  return html`<${Notice} tone="error">The DHCP server is not running: ${status.error || 'unknown error'}. It retries every 30 seconds; check <a href=${href('/settings')}>Settings</a>.<//>`;
+  return html`<${Alert} variant="danger">The DHCP server is not running: ${status.error || 'unknown error'}. It retries every 30 seconds; check <a href=${href('/settings')}>Settings</a>.<//>`;
 }
 
 // ReservationForm adds a reservation, or edits one when it has an id. A
@@ -52,7 +53,7 @@ export function ReservationForm({ reservation, onClose, onSaved }) {
     <button class="button" type="button" onClick=${onClose}>Cancel</button>
     <button class="button button-primary" type="submit" form="reservation-form" disabled=${save.busy}>${isNew ? 'Add' : 'Save'}</button>`}>
     <form id="reservation-form" class="form" onSubmit=${submit}>
-      <${Notice} error=${save.error} />
+      <${Alert} error=${save.error} />
       <div class="form-grid">
         <${Field} label="MAC address" required>
           <input class="input mono" required value=${r.mac} placeholder="aa:bb:cc:dd:ee:ff" autofocus=${isNew && !r.mac}

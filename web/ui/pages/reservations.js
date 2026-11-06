@@ -1,6 +1,7 @@
 import { html, useState } from '@lsongdev/panel/html.js';
 import { useBusy } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Empty, Table, confirmDanger, toastError } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Empty, Table } from '@lsongdev/scripts/react/components/index.js';
+import { toastError } from '@lsongdev/panel/ui.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, ReservationForm } from '../dhcp.js';
 
@@ -11,13 +12,13 @@ export default function Reservations() {
   const [editing, setEditing] = useState(null); // a reservation, or {} for a new one
 
   const remove = r => {
-    if (!confirmDanger(`Delete the reservation of ${r.ip} for ${r.hostname || r.mac}?`)) return;
+    if (!window.confirm(`Delete the reservation of ${r.ip} for ${r.hostname || r.mac}?`)) return;
     run(r.id, async () => { await api.del(`/reservations/${r.id}`); list.reload(); });
   };
 
-  return html`<${Page} title="Reservations" subtitle="Devices that always get the same address."
-    actions=${html`<button class="button button-primary" onClick=${() => setEditing({})}>Add reservation</button>`}>
-    <${Notice} error=${list.error} />
+  return html`<${PageHeader} title="Reservations" subtitle="Devices that always get the same address."
+    actions=${html`<button class="button button-primary" onClick=${() => setEditing({})}>Add reservation</button>`} />
+    <${Alert} error=${list.error} />
     ${list.data === undefined ? (list.error ? null : html`<${Loading} />`) : !list.data.length
       ? html`<${Empty}>No reservations. Reserve a device's current address from its lease, or add one here.<//>` : html`
       <${Table}>
@@ -36,6 +37,5 @@ export default function Reservations() {
         </tr>`)}</tbody>
       <//>`}
     ${editing ? html`<${ReservationForm} reservation=${editing} onClose=${() => setEditing(null)}
-      onSaved=${() => { setEditing(null); list.reload(); }} />` : null}
-  <//>`;
+      onSaved=${() => { setEditing(null); list.reload(); }} />` : null}`;
 }

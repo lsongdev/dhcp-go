@@ -1,6 +1,6 @@
 import { html, useEffect, useState } from '@lsongdev/panel/html.js';
 import { useAction } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Field, Check, ListInput, KV, toast } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Field, Check, ListInput, KeyValue, toast } from '@lsongdev/scripts/react/components/index.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, ServerStatus } from '../dhcp.js';
 
@@ -28,17 +28,16 @@ export default function Settings() {
   const status = useApi('/status', 10000);
   const interfaces = useApi('/interfaces');
   if (config.data === undefined) {
-    return html`<${Page} title="Settings">${config.error ? html`<${Notice} error=${config.error} />` : html`<${Loading} />`}<//>`;
+    return html`<${PageHeader} title="Settings" />${config.error ? html`<${Alert} error=${config.error} />` : html`<${Loading} />`}`;
   }
-  return html`<${Page} title="Settings" subtitle="The network the DHCP server answers on and what it tells clients.">
-    ${status.data ? html`<div class="card status-card"><${KV} items=${[
+  return html`<${PageHeader} title="Settings" subtitle="The network the DHCP server answers on and what it tells clients." />
+    ${status.data ? html`<div class="card status-card"><${KeyValue} items=${[
       ['Status', html`<${ServerStatus} status=${status.data} />`],
       ['Problem', status.data.error || null],
       ['Requests received', status.data.running ? String(status.data.requests) : null],
     ]} /></div>` : null}
     <${SettingsForm} saved=${config.data} interfaces=${interfaces.data || []}
-      onSaved=${() => { config.reload(); status.reload(); }} />
-  <//>`;
+      onSaved=${() => { config.reload(); status.reload(); }} />`;
 }
 
 function SettingsForm({ saved, interfaces, onSaved }) {
@@ -68,7 +67,7 @@ function SettingsForm({ saved, interfaces, onSaved }) {
   };
   const leaseKnown = LEASE_TIMES.some(([v]) => v === c.lease_time);
   return html`<form class="form form-narrow" onSubmit=${submit}>
-    <${Notice} error=${save.error} />
+    <${Alert} error=${save.error} />
     <${Check} label="Serve DHCP on this network" checked=${c.enabled} onChange=${e => set({ enabled: e.currentTarget.checked })} />
     <${Field} label="Interface" required=${c.enabled}
       hint=${iface ? `Answers on ${iface.addresses.join(', ')}` : 'The network the server answers on; its address is the server address'}>

@@ -1,6 +1,7 @@
 import { html, useState } from '@lsongdev/panel/html.js';
 import { useBusy } from '@lsongdev/panel/hooks.js';
-import { Page, Notice, Loading, Empty, Tabs, Table, KV, Badge, confirmDanger, toastError } from '@lsongdev/panel/ui.js';
+import { PageHeader, Alert, Loading, Empty, Tabs, Table, KeyValue, Badge } from '@lsongdev/scripts/react/components/index.js';
+import { toastError } from '@lsongdev/panel/ui.js';
 import { usePanel } from '@lsongdev/panel/panel.js';
 import { ago, datetime } from '@lsongdev/panel/format.js';
 import { useApi, ServerStatus, ServerNotice, ReservationForm } from '../dhcp.js';
@@ -20,15 +21,15 @@ export default function Leases() {
   const active = all.filter(l => l.active).length;
 
   const remove = l => {
-    if (!confirmDanger(`Forget the lease of ${l.ip}${l.hostname ? ` (${l.hostname})` : ''}? The address can then go to another device; a device still using it is refused when it renews.`)) return;
+    if (!window.confirm(`Forget the lease of ${l.ip}${l.hostname ? ` (${l.hostname})` : ''}? The address can then go to another device; a device still using it is refused when it renews.`)) return;
     run(l.ip, async () => { await api.del(`/leases/${encodeURIComponent(l.ip)}`); leases.reload(); status.reload(); });
   };
 
   const s = status.data;
-  return html`<${Page} title="Leases" subtitle="Addresses the DHCP server handed out.">
-    <${Notice} error=${status.error || leases.error} />
+  return html`<${PageHeader} title="Leases" subtitle="Addresses the DHCP server handed out." />
+    <${Alert} error=${status.error || leases.error} />
     <${ServerNotice} status=${s} />
-    ${s?.running ? html`<div class="card status-card"><${KV} items=${[
+    ${s?.running ? html`<div class="card status-card"><${KeyValue} items=${[
       ['Status', html`<${ServerStatus} status=${s} />`],
       ['Interface', html`${s.interface} <span class="muted">· ${s.server_ip} on ${s.subnet}</span>`],
       ['Range', html`<span class="mono">${s.range_start} – ${s.range_end}</span>`],
@@ -48,7 +49,7 @@ export default function Leases() {
           <td class="mono nowrap">${l.ip}</td>
           <td>
             <div class="cell-main">${l.hostname || html`<span class="muted">No host name</span>`}
-              ${l.reserved ? html` <${Badge} tone="blue">Reserved<//>` : null}</div>
+              ${l.reserved ? html` <${Badge} variant="info">Reserved<//>` : null}</div>
             <div class="cell-sub mono">${l.mac}</div>
           </td>
           <td class="nowrap" title=${datetime(l.expires_at)}>${l.active ? ago(l.expires_at) : html`<span class="muted">Expired ${ago(l.expires_at)}</span>`}</td>
@@ -59,6 +60,5 @@ export default function Leases() {
         </tr>`)}</tbody>
       <//>`}
     ${reserving ? html`<${ReservationForm} reservation=${{ mac: reserving.mac, ip: reserving.ip, hostname: reserving.hostname }}
-      onClose=${() => setReserving(null)} onSaved=${() => { setReserving(null); leases.reload(); status.reload(); }} />` : null}
-  <//>`;
+      onClose=${() => setReserving(null)} onSaved=${() => { setReserving(null); leases.reload(); status.reload(); }} />` : null}`;
 }
