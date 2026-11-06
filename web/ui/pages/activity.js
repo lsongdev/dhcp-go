@@ -1,6 +1,6 @@
-import { html } from '@lsongdev/panel/html.js';
+import { html } from '../lib/html.js';
 import { PageHeader, Alert, Loading, Empty, Table, Badge } from '@lsongdev/scripts/react/components/index.js';
-import { datetime } from '@lsongdev/panel/format.js';
+import { datetime } from '../lib/format.js';
 import { useApi, ServerNotice } from '../dhcp.js';
 
 const RESULT_TONES = { offer: 'info', ack: 'success', nak: 'danger', ignored: undefined };

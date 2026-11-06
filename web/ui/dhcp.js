@@ -1,9 +1,9 @@
 // DHCP UI helpers shared by the pages.
-import { html, useState } from '@lsongdev/panel/html.js';
-import { useAction, useResource } from '@lsongdev/panel/hooks.js';
-import { usePanel } from '@lsongdev/panel/panel.js';
+import { html, useState } from './lib/html.js';
+import { useAction, useResource } from './lib/hooks.js';
+import { usePanel } from './lib/panel.js';
 import { Alert, Field } from '@lsongdev/scripts/react/components/index.js';
-import { Status, Modal } from '@lsongdev/panel/ui.js';
+import { Status, Modal } from './lib/ui.js';
 
 // useApi loads a GET endpoint, polling every interval milliseconds when
 // given. A null path loads nothing yet.
