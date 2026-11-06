@@ -1,8 +1,8 @@
-import { html, useState } from '../lib/html.js';
-import { useBusy } from '../lib/hooks.js';
-import { Page, Notice, Loading, Empty, Tabs, Table, KV, Badge, confirmDanger, toastError } from '../lib/ui.js';
-import { usePanel } from '../lib/panel.js';
-import { ago, datetime } from '../lib/format.js';
+import { html, useState } from '@lsongdev/panel/html.js';
+import { useBusy } from '@lsongdev/panel/hooks.js';
+import { Page, Notice, Loading, Empty, Tabs, Table, KV, Badge, confirmDanger, toastError } from '@lsongdev/panel/ui.js';
+import { usePanel } from '@lsongdev/panel/panel.js';
+import { ago, datetime } from '@lsongdev/panel/format.js';
 import { useApi, ServerStatus, ServerNotice, ReservationForm } from '../dhcp.js';
 
 export default function Leases() {

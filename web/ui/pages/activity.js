@@ -1,6 +1,6 @@
-import { html } from '../lib/html.js';
-import { Page, Notice, Loading, Empty, Table, Badge } from '../lib/ui.js';
-import { datetime } from '../lib/format.js';
+import { html } from '@lsongdev/panel/html.js';
+import { Page, Notice, Loading, Empty, Table, Badge } from '@lsongdev/panel/ui.js';
+import { datetime } from '@lsongdev/panel/format.js';
 import { useApi, ServerNotice } from '../dhcp.js';
 
 const RESULT_TONES = { offer: 'blue', ack: 'green', nak: 'red', ignored: undefined };

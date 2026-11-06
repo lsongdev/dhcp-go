@@ -1,7 +1,7 @@
-import { html, useState } from '../lib/html.js';
-import { useBusy } from '../lib/hooks.js';
-import { Page, Notice, Loading, Empty, Table, confirmDanger, toastError } from '../lib/ui.js';
-import { usePanel } from '../lib/panel.js';
+import { html, useState } from '@lsongdev/panel/html.js';
+import { useBusy } from '@lsongdev/panel/hooks.js';
+import { Page, Notice, Loading, Empty, Table, confirmDanger, toastError } from '@lsongdev/panel/ui.js';
+import { usePanel } from '@lsongdev/panel/panel.js';
 import { useApi, ReservationForm } from '../dhcp.js';
 
 export default function Reservations() {
